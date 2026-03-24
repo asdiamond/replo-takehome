@@ -1,3 +1,5 @@
+'use client'
+
 import {
   FileText,
   Home,
@@ -5,6 +7,7 @@ import {
   Settings,
 } from "lucide-react"
 
+import { useCreatePageMutation, usePagesQuery } from "@/apis/pages/hooks"
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +32,14 @@ const workspaceItems = [
 ]
 
 export function AppSidebar() {
+  const pagesQuery = usePagesQuery()
+  const createPageMutation = useCreatePageMutation()
+  const pages = pagesQuery.data?.pages ?? []
+
+  function handleCreatePage() {
+    createPageMutation.mutate({})
+  }
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
@@ -49,7 +60,11 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarGroupAction aria-label="Create page">
+          <SidebarGroupAction
+            aria-label="Create page"
+            disabled={createPageMutation.isPending}
+            onClick={handleCreatePage}
+          >
             <Plus />
           </SidebarGroupAction>
           <SidebarGroupContent>
@@ -59,6 +74,14 @@ export function AppSidebar() {
                   <SidebarMenuButton isActive={item.isActive} tooltip={item.title}>
                     <item.icon />
                     <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {pages.map((page) => (
+                <SidebarMenuItem key={page.id}>
+                  <SidebarMenuButton tooltip={page.title}>
+                    <FileText />
+                    <span>{page.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

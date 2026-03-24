@@ -11,3 +11,7 @@ export type CreatePageInput = {
 export type CreatePageResponse = {
   page: Page
 }
+
+export type ListPagesResponse = {
+  pages: Page[]
+}

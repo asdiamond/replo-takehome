@@ -1,4 +1,18 @@
-import type { CreatePageInput, CreatePageResponse } from "@/apis/pages/types"
+import type {
+  CreatePageInput,
+  CreatePageResponse,
+  ListPagesResponse,
+} from "@/apis/pages/types"
+
+export async function getPages(): Promise<ListPagesResponse> {
+  const response = await fetch("/api/pages")
+
+  if (!response.ok) {
+    throw new Error("Failed to load pages")
+  }
+
+  return response.json()
+}
 
 export async function createPage(
   input: CreatePageInput = {}
