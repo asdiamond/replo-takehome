@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus } from "lucide-react"
-import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useBlocksQuery, useCreateBlockMutation, useUpdateBlockMutation } from "@/apis/blocks/hooks"
 import type {
@@ -262,8 +262,9 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
   return (
     <div className="relative min-w-0 rounded-xl px-1 py-1">
       {isEditing ? (
-        <>
+        <Fragment key={`edit-${block.id}`}>
           <div
+            key={`edit-surface-${block.id}`}
             ref={contentRef}
             className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
             contentEditable
@@ -303,9 +304,10 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
               {updateBlockMutation.error.message}
             </p>
           ) : null}
-        </>
+        </Fragment>
       ) : (
         <div
+          key={`preview-${block.id}`}
           className="cursor-text rounded-md px-1 py-0.5"
           role="button"
           tabIndex={0}
