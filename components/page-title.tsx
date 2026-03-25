@@ -3,6 +3,7 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from "react"
 
 import { useUpdatePageMutation } from "@/apis/pages/hooks"
+import { ContentEditableShell } from "@/components/content-editable-shell"
 
 type PageTitleProps = {
   pageId: string
@@ -96,21 +97,40 @@ export function PageTitle({ pageId, initialTitle }: PageTitleProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h1
-        ref={contentRef}
-        className="text-5xl font-semibold tracking-tight outline-none md:text-6xl"
-        contentEditable={isEditing}
-        role="textbox"
-        suppressContentEditableWarning
-        tabIndex={0}
-        onBlur={handleBlur}
-        onClick={startEditing}
-        onFocus={startEditing}
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-      >
-        {isEditing ? null : title}
-      </h1>
+      <ContentEditableShell
+        identity={pageId}
+        isEditing={isEditing}
+        editContent={
+          <h1
+            ref={contentRef}
+            className="text-5xl font-semibold tracking-tight outline-none md:text-6xl"
+            contentEditable
+            role="textbox"
+            suppressContentEditableWarning
+            tabIndex={0}
+            onBlur={handleBlur}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+          />
+        }
+        previewContent={
+          <h1
+            className="text-5xl font-semibold tracking-tight outline-none md:text-6xl"
+            role="button"
+            tabIndex={0}
+            onClick={startEditing}
+            onFocus={startEditing}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                startEditing()
+              }
+            }}
+          >
+            {title}
+          </h1>
+        }
+      />
       {updatePageMutation.error ? (
         <p className="text-sm text-destructive">{updatePageMutation.error.message}</p>
       ) : null}

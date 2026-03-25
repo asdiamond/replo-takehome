@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus } from "lucide-react"
-import { Fragment, type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
+import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useBlocksQuery, useCreateBlockMutation, useUpdateBlockMutation } from "@/apis/blocks/hooks"
 import type {
@@ -12,6 +12,7 @@ import type {
   TextBlockStyle,
   UpdateBlockInput,
 } from "@/apis/blocks/types"
+import { ContentEditableShell } from "@/components/content-editable-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -261,67 +262,70 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
 
   return (
     <div className="relative min-w-0 rounded-xl px-1 py-1">
-      {isEditing ? (
-        <Fragment key={`edit-${block.id}`}>
+      <ContentEditableShell
+        identity={block.id}
+        isEditing={isEditing}
+        editContent={
+          <>
+            <div
+              ref={contentRef}
+              className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
+              contentEditable
+              role="textbox"
+              suppressContentEditableWarning
+              tabIndex={0}
+              onBlur={handleBlur}
+              onInput={handleInput}
+              onKeyDown={handleKeyDown}
+            />
+
+            {visibleSlashCommands.length > 0 ? (
+              <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
+                <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                  Turn into
+                </div>
+                <div className="flex flex-col gap-1">
+                  {visibleSlashCommands.map((option) => (
+                    <button
+                      key={option.value}
+                      className="rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                      type="button"
+                      onClick={() => handleSlashCommandSelect(option.value)}
+                      onMouseDown={(event) => {
+                        event.preventDefault()
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {updateBlockMutation.error ? (
+              <p className="mt-2 text-sm text-destructive">
+                {updateBlockMutation.error.message}
+              </p>
+            ) : null}
+          </>
+        }
+        previewContent={
           <div
-            key={`edit-surface-${block.id}`}
-            ref={contentRef}
-            className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
-            contentEditable
-            role="textbox"
-            suppressContentEditableWarning
+            className="cursor-text rounded-md px-1 py-0.5"
+            role="button"
             tabIndex={0}
-            onBlur={handleBlur}
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-          />
-
-          {visibleSlashCommands.length > 0 ? (
-            <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
-              <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                Turn into
-              </div>
-              <div className="flex flex-col gap-1">
-                {visibleSlashCommands.map((option) => (
-                  <button
-                    key={option.value}
-                    className="rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-                    type="button"
-                    onClick={() => handleSlashCommandSelect(option.value)}
-                    onMouseDown={(event) => {
-                      event.preventDefault()
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {updateBlockMutation.error ? (
-            <p className="mt-2 text-sm text-destructive">
-              {updateBlockMutation.error.message}
-            </p>
-          ) : null}
-        </Fragment>
-      ) : (
-        <div
-          key={`preview-${block.id}`}
-          className="cursor-text rounded-md px-1 py-0.5"
-          role="button"
-          tabIndex={0}
-          onClick={startEditing}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              startEditing()
-            }
-          }}
-        >
-          <TextBlockView block={block} />
-        </div>
-      )}
+            onClick={startEditing}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                startEditing()
+              }
+            }}
+          >
+            <TextBlockView block={block} />
+          </div>
+        }
+      />
     </div>
   )
 }
