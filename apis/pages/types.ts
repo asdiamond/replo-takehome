@@ -12,6 +12,10 @@ export type CreatePageResponse = {
   page: Page
 }
 
+export type DeletePageResponse = {
+  page: Page
+}
+
 export type ListPagesResponse = {
   pages: Page[]
 }

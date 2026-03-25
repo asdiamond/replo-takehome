@@ -18,12 +18,27 @@ const selectPages = db.query(`
   ORDER BY created_at ASC
 `)
 
-export function getPages(): Page[] {
-  return (selectPages.all() as PageRow[]).map((row) => ({
+const selectPageById = db.query(`
+  SELECT id, title, created_at
+  FROM pages
+  WHERE id = ?1
+`)
+
+const deletePageById = db.query(`
+  DELETE FROM pages
+  WHERE id = ?1
+`)
+
+function mapPageRow(row: PageRow): Page {
+  return {
     id: row.id,
     title: row.title,
     createdAt: row.created_at,
-  }))
+  }
+}
+
+export function getPages(): Page[] {
+  return (selectPages.all() as PageRow[]).map(mapPageRow)
 }
 
 export function createPage(input: CreatePageInput): Page {
@@ -37,4 +52,16 @@ export function createPage(input: CreatePageInput): Page {
   insertPage.run(page.id, page.title, page.createdAt)
 
   return page
+}
+
+export function deletePage(pageId: string): Page | null {
+  const pageRow = selectPageById.get(pageId) as PageRow | null
+
+  if (!pageRow) {
+    return null
+  }
+
+  deletePageById.run(pageId)
+
+  return mapPageRow(pageRow)
 }

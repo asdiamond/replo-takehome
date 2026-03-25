@@ -3,11 +3,24 @@
 import {
   FileText,
   Home,
+  MoreHorizontal,
   Plus,
   Settings,
+  Trash2,
 } from "lucide-react"
 
-import { useCreatePageMutation, usePagesQuery } from "@/apis/pages/hooks"
+import {
+  useCreatePageMutation,
+  useDeletePageMutation,
+  usePagesQuery,
+} from "@/apis/pages/hooks"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +31,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -34,10 +48,16 @@ const workspaceItems = [
 export function AppSidebar() {
   const pagesQuery = usePagesQuery()
   const createPageMutation = useCreatePageMutation()
+  const deletePageMutation = useDeletePageMutation()
   const pages = pagesQuery.data?.pages ?? []
+  const deletingPageId = deletePageMutation.isPending ? deletePageMutation.variables : null
 
   function handleCreatePage() {
     createPageMutation.mutate({})
+  }
+
+  function handleDeletePage(pageId: string) {
+    deletePageMutation.mutate(pageId)
   }
 
   return (
@@ -83,6 +103,33 @@ export function AppSidebar() {
                     <FileText />
                     <span>{page.title}</span>
                   </SidebarMenuButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuAction
+                        aria-label={`Open actions for ${page.title}`}
+                        showOnHover
+                        onClick={(event) => {
+                          event.stopPropagation()
+                        }}
+                      >
+                        <MoreHorizontal />
+                      </SidebarMenuAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          disabled={deletingPageId === page.id}
+                          onSelect={() => {
+                            handleDeletePage(page.id)
+                          }}
+                          variant="destructive"
+                        >
+                          <Trash2 />
+                          <span>Delete page</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

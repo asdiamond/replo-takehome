@@ -1,6 +1,7 @@
 import type {
   CreatePageInput,
   CreatePageResponse,
+  DeletePageResponse,
   ListPagesResponse,
 } from "@/apis/pages/types"
 
@@ -27,6 +28,18 @@ export async function createPage(
 
   if (!response.ok) {
     throw new Error("Failed to create page")
+  }
+
+  return response.json()
+}
+
+export async function deletePage(pageId: string): Promise<DeletePageResponse> {
+  const response = await fetch(`/api/pages/${pageId}`, {
+    method: "DELETE",
+  })
+
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? "Page not found" : "Failed to delete page")
   }
 
   return response.json()
