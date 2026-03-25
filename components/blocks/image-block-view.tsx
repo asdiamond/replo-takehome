@@ -15,31 +15,9 @@ export function ImageBlockView({ block }: { block: ImageBlock }) {
 
   if (!hasImage) {
     return (
-      <div className="flex flex-col gap-3">
-        <div
-          className="flex w-full items-center gap-4 rounded-2xl border border-dashed bg-muted/40 px-6 py-5 text-left"
-          style={{
-            maxWidth: `${width}px`,
-            minHeight: `${Math.max(Math.min(height, 260), 96)}px`,
-          }}
-        >
-          <div className="flex size-10 items-center justify-center rounded-xl bg-background text-muted-foreground">
-            <ImageIcon />
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="font-medium text-foreground">
-              {block.src.trim() ? "Image unavailable" : "Add an image"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {block.src.trim()
-                ? "Click to update the image URL."
-                : "Click to open the image settings."}
-            </p>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {width} x {height}
-        </p>
+      <div className="flex w-full items-center gap-3 rounded-lg bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+        <ImageIcon className="size-5 shrink-0" />
+        <span>{block.src.trim() ? "Image unavailable" : "Add an image"}</span>
       </div>
     )
   }
