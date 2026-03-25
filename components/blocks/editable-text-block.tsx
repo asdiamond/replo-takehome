@@ -29,6 +29,17 @@ type EditableTextBlockProps = {
   pageId: string
 }
 
+/**
+ * a text block that uses contentEditable for editing. 
+ * provides a slash command menu for formatting. 
+ * has 2 modes: editing and preview. 
+ * 
+ * we have to have a skipBlurSaveRef because otherwise blurs
+ * from cancel/Escape or convert-to-image would trigger saveDraft() and
+ * race against the reset or the conversion mutation. a ref is used instead of
+ * state so the flag is readable synchronously in the blur handler without
+ * causing a re-render.
+ */
 export function EditableTextBlock({ block, pageId, onConvertToImage }: EditableTextBlockProps) {
   const updateBlockMutation = useUpdateBlockMutation(pageId)
   const [isEditing, setIsEditing] = useState(false)
