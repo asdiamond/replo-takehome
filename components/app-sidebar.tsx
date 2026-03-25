@@ -7,7 +7,6 @@ import {
   Home,
   MoreHorizontal,
   Plus,
-  Settings,
   Trash2,
 } from "lucide-react"
 
@@ -26,7 +25,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupContent,
