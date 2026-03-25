@@ -59,8 +59,8 @@ type SlashCommandOption = {
   keywords: string[]
 }
 
-const DEFAULT_IMAGE_WIDTH = 640
-const DEFAULT_IMAGE_HEIGHT = 360
+const DEFAULT_IMAGE_WIDTH = 100
+const DEFAULT_IMAGE_HEIGHT = 100
 
 const textStyleOptions: Array<{ label: string; value: TextBlockStyle }> = [
   { label: "Heading 1", value: "h1" },
