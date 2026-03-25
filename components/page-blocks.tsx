@@ -1,7 +1,7 @@
 'use client'
 
 import { Pencil, Plus } from "lucide-react"
-import { type FormEvent, useState } from "react"
+import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useBlocksQuery, useCreateBlockMutation, useUpdateBlockMutation } from "@/apis/blocks/hooks"
 import type {
@@ -29,11 +29,34 @@ type BlockFormProps = {
   onSubmit: (input: CreateBlockInput | UpdateBlockInput) => void
 }
 
+type EditableImageBlockRowProps = {
+  block: ImageBlock
+  pageId: string
+}
+
+type EditableTextBlockRowProps = {
+  block: TextBlock
+  pageId: string
+}
+
+type SlashCommandOption = {
+  label: string
+  value: TextBlockStyle
+  keywords: string[]
+}
+
 const textStyleOptions: Array<{ label: string; value: TextBlockStyle }> = [
   { label: "Heading 1", value: "h1" },
   { label: "Heading 2", value: "h2" },
   { label: "Heading 3", value: "h3" },
   { label: "Paragraph", value: "p" },
+]
+
+const slashCommandOptions: SlashCommandOption[] = [
+  { label: "Heading 1", value: "h1", keywords: ["h1", "heading1", "heading", "title", "large"] },
+  { label: "Heading 2", value: "h2", keywords: ["h2", "heading2", "heading", "medium"] },
+  { label: "Heading 3", value: "h3", keywords: ["h3", "heading3", "heading", "small"] },
+  { label: "Paragraph", value: "p", keywords: ["p", "paragraph", "text", "body"] },
 ]
 
 export function PageBlocks({ pageId }: PageBlocksProps) {
@@ -47,7 +70,7 @@ export function PageBlocks({ pageId }: PageBlocksProps) {
         <div>
           <h2 className="text-sm font-medium text-foreground">Content</h2>
           <p className="text-sm text-muted-foreground">
-            Hover over a block to edit it, or add a new one.
+            Click into a text block to edit inline, or add a new block.
           </p>
         </div>
         {!isAddingBlock ? (
@@ -103,6 +126,223 @@ export function PageBlocks({ pageId }: PageBlocksProps) {
 }
 
 function EditableBlockRow({ block, pageId }: { block: Block; pageId: string }) {
+  if (block.type === "text") {
+    return <EditableTextBlockRow block={block} pageId={pageId} />
+  }
+
+  return <EditableImageBlockRow block={block} pageId={pageId} />
+}
+
+function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
+  const updateBlockMutation = useUpdateBlockMutation(pageId)
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftValue, setDraftValue] = useState(block.value)
+  const [draftStyle, setDraftStyle] = useState<TextBlockStyle>(block.style)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const skipBlurSaveRef = useRef(false)
+
+  useEffect(() => {
+    if (!isEditing || !contentRef.current || contentRef.current.textContent === draftValue) {
+      return
+    }
+
+    contentRef.current.textContent = draftValue
+    focusEditableAtEnd(contentRef.current)
+  }, [draftValue, isEditing])
+
+  const slashCommandState = useMemo(() => getSlashCommandState(draftValue), [draftValue])
+  const visibleSlashCommands = useMemo(() => {
+    if (!slashCommandState) {
+      return []
+    }
+
+    const query = slashCommandState.query.trim().toLowerCase()
+
+    return slashCommandOptions.filter((option) => {
+      if (!query) {
+        return true
+      }
+
+      return (
+        option.label.toLowerCase().includes(query) ||
+        option.keywords.some((keyword) => keyword.includes(query))
+      )
+    })
+  }, [slashCommandState])
+
+  function startEditing() {
+    updateBlockMutation.reset()
+    setDraftValue(block.value)
+    setDraftStyle(block.style)
+    setIsEditing(true)
+  }
+
+  function handleInput() {
+    const nextValue = getEditableText(contentRef.current, draftValue)
+    setDraftValue(nextValue)
+  }
+
+  function handleCancelEditing() {
+    skipBlurSaveRef.current = true
+    updateBlockMutation.reset()
+    setDraftValue(block.value)
+    setDraftStyle(block.style)
+    setIsEditing(false)
+    contentRef.current?.blur()
+  }
+
+  function handleSlashCommandSelect(style: TextBlockStyle) {
+    const nextValue = slashCommandState?.remainder ?? draftValue
+
+    setDraftStyle(style)
+    setDraftValue(nextValue)
+
+    if (contentRef.current) {
+      contentRef.current.textContent = nextValue
+      focusEditableAtEnd(contentRef.current)
+    }
+  }
+
+  function saveDraft() {
+    const nextValue = getEditableText(contentRef.current, draftValue)
+    const hasChanges = nextValue !== block.value || draftStyle !== block.style
+
+    setDraftValue(nextValue)
+
+    if (!hasChanges) {
+      setIsEditing(false)
+      return
+    }
+
+    updateBlockMutation.mutate(
+      {
+        blockId: block.id,
+        input: {
+          type: "text",
+          style: draftStyle,
+          value: nextValue,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false)
+        },
+      }
+    )
+  }
+
+  function handleBlur() {
+    if (skipBlurSaveRef.current) {
+      skipBlurSaveRef.current = false
+      return
+    }
+
+    saveDraft()
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault()
+      handleCancelEditing()
+      return
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault()
+
+      if (visibleSlashCommands.length > 0) {
+        handleSlashCommandSelect(visibleSlashCommands[0].value)
+        return
+      }
+
+      contentRef.current?.blur()
+    }
+  }
+
+  return (
+    <div className="group/block grid grid-cols-[32px_minmax(0,1fr)] gap-3 rounded-xl px-1 py-1">
+      <div className="flex min-h-8 items-start justify-center pt-1">
+        {isEditing ? (
+          <div className="mt-2 size-2 rounded-full bg-border" />
+        ) : (
+          <Button
+            aria-label={`Edit ${block.type} block`}
+            className="opacity-0 transition-opacity group-hover/block:opacity-100 group-focus-within/block:opacity-100"
+            size="icon-xs"
+            variant="ghost"
+            onClick={startEditing}
+          >
+            <Pencil />
+          </Button>
+        )}
+      </div>
+
+      <div className="relative min-w-0">
+        {isEditing ? (
+          <>
+            <div
+              ref={contentRef}
+              className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
+              contentEditable
+              role="textbox"
+              suppressContentEditableWarning
+              tabIndex={0}
+              onBlur={handleBlur}
+              onInput={handleInput}
+              onKeyDown={handleKeyDown}
+            />
+
+            {visibleSlashCommands.length > 0 ? (
+              <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
+                <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                  Turn into
+                </div>
+                <div className="flex flex-col gap-1">
+                  {visibleSlashCommands.map((option) => (
+                    <button
+                      key={option.value}
+                      className="rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                      type="button"
+                      onClick={() => handleSlashCommandSelect(option.value)}
+                      onMouseDown={(event) => {
+                        event.preventDefault()
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {updateBlockMutation.error ? (
+              <p className="mt-2 text-sm text-destructive">
+                {updateBlockMutation.error.message}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <div
+            className="cursor-text rounded-md px-1 py-0.5"
+            role="button"
+            tabIndex={0}
+            onClick={startEditing}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                startEditing()
+              }
+            }}
+          >
+            <TextBlockView block={block} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EditableImageBlockRow({ block, pageId }: EditableImageBlockRowProps) {
   const updateBlockMutation = useUpdateBlockMutation(pageId)
   const [isEditing, setIsEditing] = useState(false)
 
@@ -145,7 +385,7 @@ function EditableBlockRow({ block, pageId }: { block: Block; pageId: string }) {
             }}
           />
         ) : (
-          <BlockRenderer block={block} />
+          <ImageBlockView block={block} />
         )}
       </div>
     </div>
@@ -303,25 +543,8 @@ function BlockForm({
   )
 }
 
-function BlockRenderer({ block }: { block: Block }) {
-  if (block.type === "text") {
-    return <TextBlockView block={block} />
-  }
-
-  return <ImageBlockView block={block} />
-}
-
 function TextBlockView({ block }: { block: TextBlock }) {
-  switch (block.style) {
-    case "h1":
-      return <h2 className="text-4xl font-semibold tracking-tight">{block.value}</h2>
-    case "h2":
-      return <h3 className="text-3xl font-semibold tracking-tight">{block.value}</h3>
-    case "h3":
-      return <h4 className="text-2xl font-semibold tracking-tight">{block.value}</h4>
-    default:
-      return <p className="text-base leading-7 text-foreground/90">{block.value}</p>
-  }
+  return <div className={`${getTextBlockClassName(block.style)} whitespace-pre-wrap`}>{block.value}</div>
 }
 
 function ImageBlockView({ block }: { block: ImageBlock }) {
@@ -358,4 +581,60 @@ function getInitialValues(block: Block): CreateBlockInput {
     width: block.width,
     height: block.height,
   }
+}
+
+function getTextBlockClassName(style: TextBlockStyle): string {
+  switch (style) {
+    case "h1":
+      return "text-4xl font-semibold tracking-tight"
+    case "h2":
+      return "text-3xl font-semibold tracking-tight"
+    case "h3":
+      return "text-2xl font-semibold tracking-tight"
+    default:
+      return "text-base leading-7 text-foreground/90"
+  }
+}
+
+function getEditableText(element: HTMLDivElement | null, fallback: string): string {
+  return element?.textContent?.replace(/\u00a0/g, " ") ?? fallback
+}
+
+function getSlashCommandState(value: string): { query: string; remainder: string } | null {
+  const trimmedValue = value.trimStart()
+
+  if (!trimmedValue.startsWith("/")) {
+    return null
+  }
+
+  const commandText = trimmedValue.slice(1)
+  const firstWhitespaceIndex = commandText.search(/\s/)
+
+  if (firstWhitespaceIndex === -1) {
+    return {
+      query: commandText.toLowerCase(),
+      remainder: "",
+    }
+  }
+
+  return {
+    query: commandText.slice(0, firstWhitespaceIndex).toLowerCase(),
+    remainder: commandText.slice(firstWhitespaceIndex).trimStart(),
+  }
+}
+
+function focusEditableAtEnd(element: HTMLDivElement) {
+  element.focus()
+
+  const selection = window.getSelection()
+
+  if (!selection) {
+    return
+  }
+
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
 }
