@@ -9,6 +9,8 @@ type PageTitleProps = {
   initialTitle: string
 }
 
+// have to do some hacking with react here because we are using contentEditable
+// we dont want react to re-render the title as we are editing it or the cursor will reset by the browser
 export function PageTitle({ pageId, initialTitle }: PageTitleProps) {
   const updatePageMutation = useUpdatePageMutation(pageId)
   const [title, setTitle] = useState(initialTitle)
