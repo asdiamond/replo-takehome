@@ -4,6 +4,8 @@ import type {
   DeletePageResponse,
   GetPageResponse,
   ListPagesResponse,
+  UpdatePageInput,
+  UpdatePageResponse,
 } from "@/apis/pages/types"
 
 export async function getPages(): Promise<ListPagesResponse> {
@@ -51,6 +53,25 @@ export async function deletePage(pageId: string): Promise<DeletePageResponse> {
 
   if (!response.ok) {
     throw new Error(response.status === 404 ? "Page not found" : "Failed to delete page")
+  }
+
+  return response.json()
+}
+
+export async function updatePage(
+  pageId: string,
+  input: UpdatePageInput
+): Promise<UpdatePageResponse> {
+  const response = await fetch(`/api/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? "Page not found" : "Failed to update page")
   }
 
   return response.json()

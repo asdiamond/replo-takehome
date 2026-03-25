@@ -8,7 +8,15 @@ export type CreatePageInput = {
   title?: string
 }
 
+export type UpdatePageInput = {
+  title: string
+}
+
 export type CreatePageResponse = {
+  page: Page
+}
+
+export type UpdatePageResponse = {
   page: Page
 }
 

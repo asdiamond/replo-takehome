@@ -1,4 +1,4 @@
-import type { CreatePageInput, Page } from "@/apis/pages/types"
+import type { CreatePageInput, Page, UpdatePageInput } from "@/apis/pages/types"
 import { deleteBlocksByPageId } from "@/server/blocks_db"
 import db from "@/server/db"
 
@@ -27,6 +27,12 @@ const selectPageById = db.query(`
 
 const deletePageById = db.query(`
   DELETE FROM pages
+  WHERE id = ?1
+`)
+
+const updatePageTitleById = db.query(`
+  UPDATE pages
+  SET title = ?2
   WHERE id = ?1
 `)
 
@@ -76,4 +82,22 @@ export function deletePage(pageId: string): Page | null {
   deletePageById.run(pageId)
 
   return mapPageRow(pageRow)
+}
+
+export function updatePage(pageId: string, input: UpdatePageInput): Page | null {
+  const pageRow = selectPageById.get(pageId) as PageRow | null
+
+  if (!pageRow) {
+    return null
+  }
+
+  const title = input.title.trim() || "Untitled"
+
+  updatePageTitleById.run(pageId, title)
+
+  return {
+    id: pageRow.id,
+    title,
+    createdAt: pageRow.created_at,
+  }
 }

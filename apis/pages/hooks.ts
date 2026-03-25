@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createPage, deletePage, getPage, getPages } from "@/apis/pages/api"
+import { createPage, deletePage, getPage, getPages, updatePage } from "@/apis/pages/api"
 import type {
   CreatePageInput,
   CreatePageResponse,
@@ -10,6 +10,8 @@ import type {
   GetPageResponse,
   ListPagesResponse,
   Page,
+  UpdatePageInput,
+  UpdatePageResponse,
 } from "@/apis/pages/types"
 
 export const pagesQueryKey = ["pages"]
@@ -56,6 +58,29 @@ export function useDeletePageMutation() {
 
         return {
           pages: currentPages.filter((currentPage) => currentPage.id !== page.id),
+        }
+      })
+    },
+  })
+}
+
+export function useUpdatePageMutation(pageId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation<UpdatePageResponse, Error, UpdatePageInput>({
+    mutationFn: (input) => updatePage(pageId, input),
+    onSuccess: ({ page }) => {
+      queryClient.setQueryData<GetPageResponse>([...pagesQueryKey, pageId], () => ({
+        page,
+      }))
+
+      queryClient.setQueryData<ListPagesResponse>(pagesQueryKey, (currentData) => {
+        const currentPages = currentData?.pages ?? []
+
+        return {
+          pages: currentPages.map((currentPage) =>
+            currentPage.id === page.id ? (page as Page) : currentPage
+          ),
         }
       })
     },
