@@ -1,5 +1,7 @@
 'use client'
 
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   FileText,
   Home,
@@ -40,12 +42,13 @@ import {
 const workspaceItems = [
   {
     title: "Home",
+    href: "/",
     icon: Home,
-    isActive: true,
   },
 ]
 
 export function AppSidebar() {
+  const pathname = usePathname()
   const pagesQuery = usePagesQuery()
   const createPageMutation = useCreatePageMutation()
   const deletePageMutation = useDeletePageMutation()
@@ -91,17 +94,29 @@ export function AppSidebar() {
             <SidebarMenu>
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton isActive={item.isActive} tooltip={item.title}>
-                    <item.icon />
-                    <span>{item.title}</span>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.title}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
               {pages.map((page) => (
                 <SidebarMenuItem key={page.id}>
-                  <SidebarMenuButton tooltip={page.title}>
-                    <FileText />
-                    <span>{page.title}</span>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === `/${page.id}`}
+                    tooltip={page.title}
+                  >
+                    <Link href={`/${page.id}`}>
+                      <FileText />
+                      <span>{page.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

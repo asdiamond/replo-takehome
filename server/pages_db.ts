@@ -41,6 +41,16 @@ export function getPages(): Page[] {
   return (selectPages.all() as PageRow[]).map(mapPageRow)
 }
 
+export function getPage(pageId: string): Page | null {
+  const pageRow = selectPageById.get(pageId) as PageRow | null
+
+  if (!pageRow) {
+    return null
+  }
+
+  return mapPageRow(pageRow)
+}
+
 export function createPage(input: CreatePageInput): Page {
   const page: Page = {
     id: crypto.randomUUID(),

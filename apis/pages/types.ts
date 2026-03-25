@@ -12,6 +12,10 @@ export type CreatePageResponse = {
   page: Page
 }
 
+export type GetPageResponse = {
+  page: Page
+}
+
 export type DeletePageResponse = {
   page: Page
 }

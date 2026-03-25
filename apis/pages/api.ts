@@ -2,6 +2,7 @@ import type {
   CreatePageInput,
   CreatePageResponse,
   DeletePageResponse,
+  GetPageResponse,
   ListPagesResponse,
 } from "@/apis/pages/types"
 
@@ -10,6 +11,16 @@ export async function getPages(): Promise<ListPagesResponse> {
 
   if (!response.ok) {
     throw new Error("Failed to load pages")
+  }
+
+  return response.json()
+}
+
+export async function getPage(pageId: string): Promise<GetPageResponse> {
+  const response = await fetch(`/api/pages/${pageId}`)
+
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? "Page not found" : "Failed to load page")
   }
 
   return response.json()

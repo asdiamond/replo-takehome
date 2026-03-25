@@ -2,11 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createPage, deletePage, getPages } from "@/apis/pages/api"
+import { createPage, deletePage, getPage, getPages } from "@/apis/pages/api"
 import type {
   CreatePageInput,
   CreatePageResponse,
   DeletePageResponse,
+  GetPageResponse,
   ListPagesResponse,
   Page,
 } from "@/apis/pages/types"
@@ -17,6 +18,13 @@ export function usePagesQuery() {
   return useQuery<ListPagesResponse, Error>({
     queryKey: pagesQueryKey,
     queryFn: getPages,
+  })
+}
+
+export function usePageQuery(pageId: string) {
+  return useQuery<GetPageResponse, Error>({
+    queryKey: [...pagesQueryKey, pageId],
+    queryFn: () => getPage(pageId),
   })
 }
 
