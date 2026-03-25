@@ -2,12 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createBlock, getBlocks } from "@/apis/blocks/api"
+import { createBlock, getBlocks, updateBlock } from "@/apis/blocks/api"
 import type {
   Block,
   CreateBlockInput,
   CreateBlockResponse,
   ListBlocksResponse,
+  UpdateBlockInput,
+  UpdateBlockResponse,
 } from "@/apis/blocks/types"
 
 export function getBlocksQueryKey(pageId: string) {
@@ -32,6 +34,25 @@ export function useCreateBlockMutation(pageId: string) {
 
         return {
           blocks: [...currentBlocks, block as Block],
+        }
+      })
+    },
+  })
+}
+
+export function useUpdateBlockMutation(pageId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation<UpdateBlockResponse, Error, { blockId: string; input: UpdateBlockInput }>({
+    mutationFn: ({ blockId, input }) => updateBlock(blockId, input),
+    onSuccess: ({ block }) => {
+      queryClient.setQueryData<ListBlocksResponse>(getBlocksQueryKey(pageId), (currentData) => {
+        const currentBlocks = currentData?.blocks ?? []
+
+        return {
+          blocks: currentBlocks.map((currentBlock) =>
+            currentBlock.id === block.id ? (block as Block) : currentBlock
+          ),
         }
       })
     },

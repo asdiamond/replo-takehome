@@ -4,6 +4,7 @@ import type {
   ImageBlock,
   TextBlock,
   TextBlockStyle,
+  UpdateBlockInput,
 } from "@/apis/blocks/types"
 import db from "@/server/db"
 
@@ -51,6 +52,22 @@ const selectBlocksByPageId = db.query(`
   ORDER BY sort_order ASC, created_at ASC
 `)
 
+const selectBlockById = db.query(`
+  SELECT
+    id,
+    page_id,
+    type,
+    sort_order,
+    text_style,
+    text_value,
+    image_src,
+    image_width,
+    image_height,
+    created_at
+  FROM blocks
+  WHERE id = ?1
+`)
+
 const selectMaxSortOrderByPageId = db.query(`
   SELECT MAX(sort_order) AS max_sort_order
   FROM blocks
@@ -71,6 +88,30 @@ const insertBlock = db.query(`
     created_at
   )
   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+`)
+
+const updateTextBlockStatement = db.query(`
+  UPDATE blocks
+  SET
+    type = ?2,
+    text_style = ?3,
+    text_value = ?4,
+    image_src = NULL,
+    image_width = NULL,
+    image_height = NULL
+  WHERE id = ?1
+`)
+
+const updateImageBlockStatement = db.query(`
+  UPDATE blocks
+  SET
+    type = ?2,
+    text_style = NULL,
+    text_value = NULL,
+    image_src = ?3,
+    image_width = ?4,
+    image_height = ?5
+  WHERE id = ?1
 `)
 
 const deleteBlocksByPageIdStatement = db.query(`
@@ -175,6 +216,45 @@ export function createBlock(pageId: string, input: CreateBlockInput): Block | nu
     block.height,
     block.createdAt
   )
+
+  return block
+}
+
+export function updateBlock(blockId: string, input: UpdateBlockInput): Block | null {
+  const existingBlockRow = selectBlockById.get(blockId) as BlockRow | null
+
+  if (!existingBlockRow) {
+    return null
+  }
+
+  if (input.type === "text") {
+    const block: TextBlock = {
+      id: existingBlockRow.id,
+      pageId: existingBlockRow.page_id,
+      type: "text",
+      sortOrder: existingBlockRow.sort_order,
+      style: input.style,
+      value: input.value.trim(),
+      createdAt: existingBlockRow.created_at,
+    }
+
+    updateTextBlockStatement.run(block.id, block.type, block.style, block.value)
+
+    return block
+  }
+
+  const block: ImageBlock = {
+    id: existingBlockRow.id,
+    pageId: existingBlockRow.page_id,
+    type: "image",
+    sortOrder: existingBlockRow.sort_order,
+    src: input.src.trim(),
+    width: input.width,
+    height: input.height,
+    createdAt: existingBlockRow.created_at,
+  }
+
+  updateImageBlockStatement.run(block.id, block.type, block.src, block.width, block.height)
 
   return block
 }

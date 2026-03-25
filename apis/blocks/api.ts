@@ -2,6 +2,8 @@ import type {
   CreateBlockInput,
   CreateBlockResponse,
   ListBlocksResponse,
+  UpdateBlockInput,
+  UpdateBlockResponse,
 } from "@/apis/blocks/types"
 
 export async function getBlocks(pageId: string): Promise<ListBlocksResponse> {
@@ -28,6 +30,25 @@ export async function createBlock(
 
   if (!response.ok) {
     throw new Error(response.status === 404 ? "Page not found" : "Failed to create block")
+  }
+
+  return response.json()
+}
+
+export async function updateBlock(
+  blockId: string,
+  input: UpdateBlockInput
+): Promise<UpdateBlockResponse> {
+  const response = await fetch(`/api/blocks/${blockId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? "Block not found" : "Failed to update block")
   }
 
   return response.json()

@@ -36,8 +36,13 @@ export type CreateImageBlockInput = {
 }
 
 export type CreateBlockInput = CreateTextBlockInput | CreateImageBlockInput
+export type UpdateBlockInput = CreateBlockInput
 
 export type CreateBlockResponse = {
+  block: Block
+}
+
+export type UpdateBlockResponse = {
   block: Block
 }
 
