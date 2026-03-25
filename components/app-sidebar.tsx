@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   FileText,
   Home,
@@ -47,6 +47,7 @@ const workspaceItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const pagesQuery = usePagesQuery()
   const createPageMutation = useCreatePageMutation()
   const deletePageMutation = useDeletePageMutation()
@@ -54,7 +55,11 @@ export function AppSidebar() {
   const deletingPageId = deletePageMutation.isPending ? deletePageMutation.variables : null
 
   function handleCreatePage() {
-    createPageMutation.mutate({})
+    createPageMutation.mutate({}, {
+      onSuccess: ({ page }) => {
+        router.push(`/${page.id}`)
+      },
+    })
   }
 
   function handleDeletePage(pageId: string) {
