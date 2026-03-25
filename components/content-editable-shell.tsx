@@ -7,6 +7,8 @@ type ContentEditableShellProps = {
   previewContent: ReactNode
 }
 
+// we are using a fragment to escape out of reacts reactivity for contentEditable
+// if you dont do this, react and contentEditable will disagree and you'll get bad content
 export function ContentEditableShell({
   editContent,
   identity,
