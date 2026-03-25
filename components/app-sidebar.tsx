@@ -76,7 +76,7 @@ export function AppSidebar() {
                 <FileText />
               </div>
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-medium">replo takehome asdiamond</span>
+                <span className="truncate font-medium">Workspace</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

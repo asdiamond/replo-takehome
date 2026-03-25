@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { Search } from "lucide-react"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -20,8 +19,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Notion Dupe",
-  description: "A Notion-style workspace built with shadcn/ui",
+  title: "Replo Takehome asdiamond",
+  description: "A fullstack takehome project built with Next.js, React, React Query, and shadcn/ui",
 }
 
 export default function RootLayout({
@@ -45,16 +44,9 @@ export default function RootLayout({
                   <div className="h-4 w-px bg-border" />
                   <div className="flex flex-1 items-center justify-between gap-3">
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-medium">Product Workspace</span>
+                      <span className="truncate text-sm font-medium">Replo Takehome asdiamond</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        Team docs, notes, and planning
-                      </span>
-                    </div>
-                    <div className="hidden items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground md:flex">
-                      <Search className="size-4" />
-                      <span>Search</span>
-                      <span className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px]">
-                        Cmd+K
+                        fullstack takehome project
                       </span>
                     </div>
                   </div>
