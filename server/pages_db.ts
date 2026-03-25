@@ -1,4 +1,5 @@
 import type { CreatePageInput, Page } from "@/apis/pages/types"
+import { deleteBlocksByPageId } from "@/server/blocks_db"
 import db from "@/server/db"
 
 type PageRow = {
@@ -71,6 +72,7 @@ export function deletePage(pageId: string): Page | null {
     return null
   }
 
+  deleteBlocksByPageId(pageId)
   deletePageById.run(pageId)
 
   return mapPageRow(pageRow)

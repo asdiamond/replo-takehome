@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { PageBlocks } from "@/components/page-blocks"
 import { getPage } from "@/server/pages_db"
 
 type PageRouteProps = {
@@ -26,6 +27,7 @@ export default async function PageRoute({ params }: PageRouteProps) {
             Opened page <span className="font-mono text-sm text-foreground/70">{page.id}</span>
           </p>
         </div>
+        <PageBlocks pageId={page.id} />
       </div>
     </main>
   )
