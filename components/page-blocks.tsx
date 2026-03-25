@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus } from "lucide-react"
+import { ImageIcon, Plus } from "lucide-react"
 import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useBlocksQuery, useCreateBlockMutation, useUpdateBlockMutation } from "@/apis/blocks/hooks"
@@ -14,6 +14,14 @@ import type {
 } from "@/apis/blocks/types"
 import { ContentEditableShell } from "@/components/content-editable-shell"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 
 type PageBlocksProps = {
@@ -32,19 +40,27 @@ type BlockFormProps = {
 
 type EditableImageBlockRowProps = {
   block: ImageBlock
+  onAutoOpenHandled: () => void
   pageId: string
+  shouldAutoOpenModal: boolean
 }
 
 type EditableTextBlockRowProps = {
   block: TextBlock
+  onConvertToImage: (blockId: string) => void
   pageId: string
 }
 
+type SlashCommandValue = TextBlockStyle | "image"
+
 type SlashCommandOption = {
   label: string
-  value: TextBlockStyle
+  value: SlashCommandValue
   keywords: string[]
 }
+
+const DEFAULT_IMAGE_WIDTH = 640
+const DEFAULT_IMAGE_HEIGHT = 360
 
 const textStyleOptions: Array<{ label: string; value: TextBlockStyle }> = [
   { label: "Heading 1", value: "h1" },
@@ -58,11 +74,13 @@ const slashCommandOptions: SlashCommandOption[] = [
   { label: "Heading 2", value: "h2", keywords: ["h2", "heading2", "heading", "medium"] },
   { label: "Heading 3", value: "h3", keywords: ["h3", "heading3", "heading", "small"] },
   { label: "Paragraph", value: "p", keywords: ["p", "paragraph", "text", "body"] },
+  { label: "Image", value: "image", keywords: ["image", "photo", "picture", "media"] },
 ]
 
 export function PageBlocks({ pageId }: PageBlocksProps) {
   const blocksQuery = useBlocksQuery(pageId)
   const createBlockMutation = useCreateBlockMutation(pageId)
+  const [autoOpenImageBlockId, setAutoOpenImageBlockId] = useState<string | null>(null)
   const [isAddingBlock, setIsAddingBlock] = useState(false)
 
   return (
@@ -119,22 +137,48 @@ export function PageBlocks({ pageId }: PageBlocksProps) {
         ) : null}
 
         {blocksQuery.data?.blocks.map((block) => (
-          <EditableBlockRow key={block.id} block={block} pageId={pageId} />
+          <EditableBlockRow
+            key={block.id}
+            autoOpenImageBlockId={autoOpenImageBlockId}
+            block={block}
+            pageId={pageId}
+            onAutoOpenImageHandled={() => setAutoOpenImageBlockId(null)}
+            onConvertToImage={(blockId) => setAutoOpenImageBlockId(blockId)}
+          />
         ))}
       </div>
     </section>
   )
 }
 
-function EditableBlockRow({ block, pageId }: { block: Block; pageId: string }) {
+function EditableBlockRow({
+  block,
+  pageId,
+  autoOpenImageBlockId,
+  onAutoOpenImageHandled,
+  onConvertToImage,
+}: {
+  block: Block
+  pageId: string
+  autoOpenImageBlockId: string | null
+  onAutoOpenImageHandled: () => void
+  onConvertToImage: (blockId: string) => void
+}) {
   if (block.type === "text") {
-    return <EditableTextBlockRow block={block} pageId={pageId} />
+    return <EditableTextBlockRow block={block} pageId={pageId} onConvertToImage={onConvertToImage} />
   }
 
-  return <EditableImageBlockRow block={block} pageId={pageId} />
+  return (
+    <EditableImageBlockRow
+      block={block}
+      pageId={pageId}
+      shouldAutoOpenModal={autoOpenImageBlockId === block.id}
+      onAutoOpenHandled={onAutoOpenImageHandled}
+    />
+  )
 }
 
-function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
+function EditableTextBlockRow({ block, pageId, onConvertToImage }: EditableTextBlockRowProps) {
   const updateBlockMutation = useUpdateBlockMutation(pageId)
   const [isEditing, setIsEditing] = useState(false)
   const [draftValue, setDraftValue] = useState(block.value)
@@ -192,10 +236,33 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
     contentRef.current?.blur()
   }
 
-  function handleSlashCommandSelect(style: TextBlockStyle) {
+  function handleSlashCommandSelect(command: SlashCommandValue) {
+    if (command === "image") {
+      skipBlurSaveRef.current = true
+      updateBlockMutation.reset()
+      updateBlockMutation.mutate(
+        {
+          blockId: block.id,
+          input: {
+            type: "image",
+            src: "",
+            width: DEFAULT_IMAGE_WIDTH,
+            height: DEFAULT_IMAGE_HEIGHT,
+          },
+        },
+        {
+          onSuccess: ({ block: nextBlock }) => {
+            setIsEditing(false)
+            onConvertToImage(nextBlock.id)
+          },
+        }
+      )
+      return
+    }
+
     const nextValue = slashCommandState?.remainder ?? draftValue
 
-    setDraftStyle(style)
+    setDraftStyle(command)
     setDraftValue(nextValue)
 
     if (contentRef.current) {
@@ -330,47 +397,151 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
   )
 }
 
-function EditableImageBlockRow({ block, pageId }: EditableImageBlockRowProps) {
+function EditableImageBlockRow({
+  block,
+  pageId,
+  shouldAutoOpenModal,
+  onAutoOpenHandled,
+}: EditableImageBlockRowProps) {
   const updateBlockMutation = useUpdateBlockMutation(pageId)
   const [isEditing, setIsEditing] = useState(false)
+  const [imageSrc, setImageSrc] = useState(block.src)
+  const [imageWidth, setImageWidth] = useState(String(block.width || DEFAULT_IMAGE_WIDTH))
+  const [imageHeight, setImageHeight] = useState(String(block.height || DEFAULT_IMAGE_HEIGHT))
+
+  function resetDraft() {
+    setImageSrc(block.src)
+    setImageWidth(String(block.width || DEFAULT_IMAGE_WIDTH))
+    setImageHeight(String(block.height || DEFAULT_IMAGE_HEIGHT))
+  }
+
+  function openEditor() {
+    updateBlockMutation.reset()
+    resetDraft()
+    setIsEditing(true)
+  }
+
+  function closeEditor() {
+    updateBlockMutation.reset()
+    setIsEditing(false)
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    updateBlockMutation.mutate(
+      {
+        blockId: block.id,
+        input: {
+          type: "image",
+          src: imageSrc,
+          width: Number(imageWidth),
+          height: Number(imageHeight),
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false)
+        },
+      }
+    )
+  }
 
   return (
     <div className="min-w-0 rounded-xl px-1 py-1">
-      {isEditing ? (
-        <BlockForm
-          allowTypeSelection={false}
-          errorMessage={updateBlockMutation.error?.message}
-          initialValues={getInitialValues(block)}
-          isPending={updateBlockMutation.isPending}
-          submitLabel="Save"
-          onCancel={() => setIsEditing(false)}
-          onSubmit={(input) => {
-            updateBlockMutation.mutate(
-              { blockId: block.id, input: input as UpdateBlockInput },
-              {
-                onSuccess: () => {
-                  setIsEditing(false)
-                },
-              }
-            )
-          }}
-        />
-      ) : (
-        <div
-          className="cursor-pointer rounded-xl transition-colors hover:bg-muted/30 focus-visible:bg-muted/30"
-          role="button"
-          tabIndex={0}
-          onClick={() => setIsEditing(true)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              setIsEditing(true)
+      <div
+        className="cursor-pointer rounded-xl transition-colors hover:bg-muted/30 focus-visible:bg-muted/30"
+        role="button"
+        tabIndex={0}
+        onClick={openEditor}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            openEditor()
+          }
+        }}
+      >
+        <ImageBlockView block={block} />
+      </div>
+
+      <Dialog
+        open={isEditing || shouldAutoOpenModal}
+        onOpenChange={(open) => {
+          if (open) {
+            openEditor()
+            return
+          }
+
+          closeEditor()
+        }}
+      >
+        <DialogContent
+          className="max-w-xl gap-5 p-0"
+          onOpenAutoFocus={() => {
+            if (shouldAutoOpenModal) {
+              updateBlockMutation.reset()
+              onAutoOpenHandled()
             }
           }}
         >
-          <ImageBlockView block={block} />
-        </div>
-      )}
+          <form className="flex flex-col gap-5 p-5" onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>{block.src.trim() ? "Edit image" : "Add an image"}</DialogTitle>
+              <DialogDescription>
+                Add an image URL and size for this block. Leave the source empty to keep the placeholder.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4">
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="font-medium text-foreground">Image source</span>
+                <Input
+                  placeholder="https://example.com/image.png"
+                  value={imageSrc}
+                  onChange={(event) => setImageSrc(event.target.value)}
+                />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="font-medium text-foreground">Width</span>
+                  <Input
+                    required
+                    min={1}
+                    type="number"
+                    value={imageWidth}
+                    onChange={(event) => setImageWidth(event.target.value)}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="font-medium text-foreground">Height</span>
+                  <Input
+                    required
+                    min={1}
+                    type="number"
+                    value={imageHeight}
+                    onChange={(event) => setImageHeight(event.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {updateBlockMutation.error ? (
+              <p className="text-sm text-destructive">{updateBlockMutation.error.message}</p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={closeEditor}>
+                Cancel
+              </Button>
+              <Button disabled={updateBlockMutation.isPending} type="submit">
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -391,7 +562,7 @@ function BlockForm({
   const initialImageValues =
     initialValues?.type === "image"
       ? initialValues
-      : { type: "image" as const, src: "", width: 640, height: 360 }
+      : { type: "image" as const, src: "", width: DEFAULT_IMAGE_WIDTH, height: DEFAULT_IMAGE_HEIGHT }
 
   const [blockType, setBlockType] = useState<"text" | "image">(initialValues?.type ?? "text")
   const [textStyle, setTextStyle] = useState<TextBlockStyle>(initialTextValues.style)
@@ -483,7 +654,6 @@ function BlockForm({
           <label className="flex flex-col gap-2 text-sm">
             <span className="font-medium text-foreground">Image source</span>
             <Input
-              required
               placeholder="https://example.com/image.png"
               value={imageSrc}
               onChange={(event) => setImageSrc(event.target.value)}
@@ -531,6 +701,42 @@ function TextBlockView({ block }: { block: TextBlock }) {
 }
 
 function ImageBlockView({ block }: { block: ImageBlock }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const width = block.width || DEFAULT_IMAGE_WIDTH
+  const height = block.height || DEFAULT_IMAGE_HEIGHT
+  const hasImage = block.src.trim().length > 0 && failedSrc !== block.src
+
+  if (!hasImage) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div
+          className="flex w-full items-center gap-4 rounded-2xl border border-dashed bg-muted/40 px-6 py-5 text-left"
+          style={{
+            maxWidth: `${width}px`,
+            minHeight: `${Math.max(Math.min(height, 260), 96)}px`,
+          }}
+        >
+          <div className="flex size-10 items-center justify-center rounded-xl bg-background text-muted-foreground">
+            <ImageIcon />
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="font-medium text-foreground">
+              {block.src.trim() ? "Image unavailable" : "Add an image"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {block.src.trim()
+                ? "Click to update the image URL."
+                : "Click to open the image settings."}
+            </p>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {width} x {height}
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {/* A plain img keeps arbitrary user-provided URLs working for this MVP. */}
@@ -538,32 +744,16 @@ function ImageBlockView({ block }: { block: ImageBlock }) {
       <img
         alt=""
         className="max-w-full rounded-2xl border object-cover"
-        height={block.height}
+        height={height}
+        onError={() => setFailedSrc(block.src)}
         src={block.src}
-        width={block.width}
+        width={width}
       />
       <p className="text-sm text-muted-foreground">
-        {block.width} x {block.height}
+        {width} x {height}
       </p>
     </div>
   )
-}
-
-function getInitialValues(block: Block): CreateBlockInput {
-  if (block.type === "text") {
-    return {
-      type: "text",
-      style: block.style,
-      value: block.value,
-    }
-  }
-
-  return {
-    type: "image",
-    src: block.src,
-    width: block.width,
-    height: block.height,
-  }
 }
 
 function getTextBlockClassName(style: TextBlockStyle): string {
