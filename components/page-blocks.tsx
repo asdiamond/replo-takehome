@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { useBlocksQuery, useCreateBlockMutation, useUpdateBlockMutation } from "@/apis/blocks/hooks"
@@ -260,84 +260,66 @@ function EditableTextBlockRow({ block, pageId }: EditableTextBlockRowProps) {
   }
 
   return (
-    <div className="group/block grid grid-cols-[32px_minmax(0,1fr)] gap-3 rounded-xl px-1 py-1">
-      <div className="flex min-h-8 items-start justify-center pt-1">
-        {isEditing ? (
-          <div className="mt-2 size-2 rounded-full bg-border" />
-        ) : (
-          <Button
-            aria-label={`Edit ${block.type} block`}
-            className="opacity-0 transition-opacity group-hover/block:opacity-100 group-focus-within/block:opacity-100"
-            size="icon-xs"
-            variant="ghost"
-            onClick={startEditing}
-          >
-            <Pencil />
-          </Button>
-        )}
-      </div>
-
-      <div className="relative min-w-0">
-        {isEditing ? (
-          <>
-            <div
-              ref={contentRef}
-              className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
-              contentEditable
-              role="textbox"
-              suppressContentEditableWarning
-              tabIndex={0}
-              onBlur={handleBlur}
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-            />
-
-            {visibleSlashCommands.length > 0 ? (
-              <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
-                <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                  Turn into
-                </div>
-                <div className="flex flex-col gap-1">
-                  {visibleSlashCommands.map((option) => (
-                    <button
-                      key={option.value}
-                      className="rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-                      type="button"
-                      onClick={() => handleSlashCommandSelect(option.value)}
-                      onMouseDown={(event) => {
-                        event.preventDefault()
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {updateBlockMutation.error ? (
-              <p className="mt-2 text-sm text-destructive">
-                {updateBlockMutation.error.message}
-              </p>
-            ) : null}
-          </>
-        ) : (
+    <div className="relative min-w-0 rounded-xl px-1 py-1">
+      {isEditing ? (
+        <>
           <div
-            className="cursor-text rounded-md px-1 py-0.5"
-            role="button"
+            ref={contentRef}
+            className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
+            contentEditable
+            role="textbox"
+            suppressContentEditableWarning
             tabIndex={0}
-            onClick={startEditing}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault()
-                startEditing()
-              }
-            }}
-          >
-            <TextBlockView block={block} />
-          </div>
-        )}
-      </div>
+            onBlur={handleBlur}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+          />
+
+          {visibleSlashCommands.length > 0 ? (
+            <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
+              <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                Turn into
+              </div>
+              <div className="flex flex-col gap-1">
+                {visibleSlashCommands.map((option) => (
+                  <button
+                    key={option.value}
+                    className="rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                    type="button"
+                    onClick={() => handleSlashCommandSelect(option.value)}
+                    onMouseDown={(event) => {
+                      event.preventDefault()
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {updateBlockMutation.error ? (
+            <p className="mt-2 text-sm text-destructive">
+              {updateBlockMutation.error.message}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <div
+          className="cursor-text rounded-md px-1 py-0.5"
+          role="button"
+          tabIndex={0}
+          onClick={startEditing}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              startEditing()
+            }
+          }}
+        >
+          <TextBlockView block={block} />
+        </div>
+      )}
     </div>
   )
 }
@@ -347,47 +329,42 @@ function EditableImageBlockRow({ block, pageId }: EditableImageBlockRowProps) {
   const [isEditing, setIsEditing] = useState(false)
 
   return (
-    <div className="group/block grid grid-cols-[32px_minmax(0,1fr)] gap-3 rounded-xl px-1 py-1">
-      <div className="flex min-h-8 items-start justify-center pt-1">
-        {isEditing ? (
-          <div className="mt-2 size-2 rounded-full bg-border" />
-        ) : (
-          <Button
-            aria-label={`Edit ${block.type} block`}
-            className="opacity-0 transition-opacity group-hover/block:opacity-100 group-focus-within/block:opacity-100"
-            size="icon-xs"
-            variant="ghost"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil />
-          </Button>
-        )}
-      </div>
-
-      <div className="min-w-0">
-        {isEditing ? (
-          <BlockForm
-            allowTypeSelection={false}
-            errorMessage={updateBlockMutation.error?.message}
-            initialValues={getInitialValues(block)}
-            isPending={updateBlockMutation.isPending}
-            submitLabel="Save"
-            onCancel={() => setIsEditing(false)}
-            onSubmit={(input) => {
-              updateBlockMutation.mutate(
-                { blockId: block.id, input: input as UpdateBlockInput },
-                {
-                  onSuccess: () => {
-                    setIsEditing(false)
-                  },
-                }
-              )
-            }}
-          />
-        ) : (
+    <div className="min-w-0 rounded-xl px-1 py-1">
+      {isEditing ? (
+        <BlockForm
+          allowTypeSelection={false}
+          errorMessage={updateBlockMutation.error?.message}
+          initialValues={getInitialValues(block)}
+          isPending={updateBlockMutation.isPending}
+          submitLabel="Save"
+          onCancel={() => setIsEditing(false)}
+          onSubmit={(input) => {
+            updateBlockMutation.mutate(
+              { blockId: block.id, input: input as UpdateBlockInput },
+              {
+                onSuccess: () => {
+                  setIsEditing(false)
+                },
+              }
+            )
+          }}
+        />
+      ) : (
+        <div
+          className="cursor-pointer rounded-xl transition-colors hover:bg-muted/30 focus-visible:bg-muted/30"
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsEditing(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              setIsEditing(true)
+            }
+          }}
+        >
           <ImageBlockView block={block} />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
