@@ -152,18 +152,6 @@ export function AppSidebar() {
         </SidebarGroup>
 
       </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-
       <SidebarRail />
     </Sidebar>
   )
