@@ -61,6 +61,7 @@ type SlashCommandOption = {
 
 const DEFAULT_IMAGE_WIDTH = 100
 const DEFAULT_IMAGE_HEIGHT = 100
+const EMPTY_TEXT_BLOCK_PLACEHOLDER = "/ for commands"
 
 const textStyleOptions: Array<{ label: string; value: TextBlockStyle }> = [
   { label: "Heading 1", value: "h1" },
@@ -334,17 +335,27 @@ function EditableTextBlockRow({ block, pageId, onConvertToImage }: EditableTextB
         isEditing={isEditing}
         editContent={
           <>
-            <div
-              ref={contentRef}
-              className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
-              contentEditable
-              role="textbox"
-              suppressContentEditableWarning
-              tabIndex={0}
-              onBlur={handleBlur}
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-            />
+            <div className="relative">
+              <div
+                ref={contentRef}
+                className={`${getTextBlockClassName(draftStyle)} min-h-8 cursor-text rounded-md px-1 py-0.5 whitespace-pre-wrap outline-none`}
+                contentEditable
+                role="textbox"
+                suppressContentEditableWarning
+                tabIndex={0}
+                onBlur={handleBlur}
+                onInput={handleInput}
+                onKeyDown={handleKeyDown}
+              />
+              {!hasTextBlockContent(draftValue) ? (
+                <div
+                  aria-hidden="true"
+                  className={`${getTextBlockClassName(draftStyle)} pointer-events-none absolute inset-0 px-1 py-0.5 text-muted-foreground`}
+                >
+                  {EMPTY_TEXT_BLOCK_PLACEHOLDER}
+                </div>
+              ) : null}
+            </div>
 
             {visibleSlashCommands.length > 0 ? (
               <div className="absolute top-full left-0 z-20 mt-2 w-56 rounded-xl border bg-popover p-2 shadow-sm">
@@ -697,6 +708,14 @@ function BlockForm({
 }
 
 function TextBlockView({ block }: { block: TextBlock }) {
+  if (!hasTextBlockContent(block.value)) {
+    return (
+      <div className={`${getTextBlockClassName(block.style)} whitespace-pre-wrap text-muted-foreground`}>
+        {EMPTY_TEXT_BLOCK_PLACEHOLDER}
+      </div>
+    )
+  }
+
   return <div className={`${getTextBlockClassName(block.style)} whitespace-pre-wrap`}>{block.value}</div>
 }
 
@@ -767,6 +786,10 @@ function getTextBlockClassName(style: TextBlockStyle): string {
     default:
       return "text-base leading-7 text-foreground/90"
   }
+}
+
+function hasTextBlockContent(value: string): boolean {
+  return value.trim().length > 0
 }
 
 function getEditableText(element: HTMLDivElement | null, fallback: string): string {
